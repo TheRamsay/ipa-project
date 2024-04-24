@@ -1,0 +1,66 @@
+{
+    "version": "2.0.0",
+    "windows": {},
+    "tasks": [
+        {
+            "label": "Build IPA_projekt_2024",
+            "type": "shell",
+            "command": "g++",
+            "args": [
+                "-g",
+                "-mavx",
+                "-std=c++11",
+                "-fpic",
+                "-o",
+                "retinanetpost",
+                "-DDEBUG",
+                "retinanetpost_asm.o",
+                "retinanetpost.cpp",
+                "src/utils.cpp",
+                "src/prior_boxes.cpp",
+                "src/reader.cpp",
+                "-Iinclude/",
+                "`pkg-config",
+                "--cflags",
+                "opencv4`",
+                "`pkg-config",
+                "--libs",
+                "opencv4`",
+                "-ldl"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [],
+            "dependsOn": ["ASM part"],
+            "isBackground": false
+        },
+        {
+            "label": "ASM part",
+            "type": "shell",
+            "command": "gcc",
+            "args": ["-masm=intel", "-g", "-c", "retinanetpost_asm.s"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [],
+            "dependsOn": [],
+            "isBackground": false
+        },
+        {
+            "label": "Run",
+            "type": "shell",
+            "command": "./retinanetpost",
+            "args": ["input/input.jpg", "input/input.txt"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [],
+            "dependsOn": ["Build IPA_projekt_2024"],
+            "isBackground": false
+        }
+    ]
+}

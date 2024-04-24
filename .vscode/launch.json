@@ -1,0 +1,60 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "(gdb) Launch",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/retinanetpost",
+      "args": [
+        "input/input.jpg",
+        "input/input.txt"
+      ],
+      "stopAtEntry": true,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "preLaunchTask": "Build IPA_projekt_2024",
+      "windows": {
+        "MIMode": "gdb",
+        "miDebuggerPath": "gdb",
+        "setupCommands": [
+          {
+            "description": "Enable pretty-printing for gdb",
+            "text": "-enable-pretty-printing",
+            "ignoreFailures": true
+          },
+          {
+            "description": "Reduce gdb verbosity",
+            "text": "set print thread-events on",
+            "ignoreFailures": true
+          }
+        ],
+        "logging": {
+          "trace": true,
+          "traceResponse": true,
+          "engineLogging": true
+        }
+      }
+    },
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "cppdbg",
+      "request": "launch",
+      "args": [],
+      "stopAtEntry": false,
+      "externalConsole": false,
+      "cwd": "/home/ramsay/school/ipa/IPA_projekt_2024",
+      "program": "/home/ramsay/school/ipa/IPA_projekt_2024/build/Debug/outDebug",
+      "MIMode": "gdb",
+      "miDebuggerPath": "gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ]
+    }
+  ]
+}
