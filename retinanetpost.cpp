@@ -64,6 +64,7 @@ int main(int argc, char** argv)
     vector<float> floatarrscr = split_vectors[1];
 
 
+    std::vector<std::vector<float>> loc_soa;
     std::vector<std::vector<float>> loc;
     for (size_t i = 0; i < num_anchors; i++) {
         loc.push_back({floatarr[i * 4], floatarr[i * 4 + 1], floatarr[i * 4 + 2], floatarr[i * 4 + 3]});
