@@ -3,6 +3,9 @@
 * Tomas Goldmann,2024
 */
 
+#ifndef READER_HPP
+#define READER_HPP
+
 #pragma once
 
 #include <iostream>
@@ -12,6 +15,37 @@
 
 using namespace std;
 
+class Data {
+public:
+    size_t size;
+    float *loc_x = NULL;
+    float *loc_y = NULL;
+    float *loc_w = NULL;
+    float *loc_h = NULL;
+
+    float *prior_x = NULL;
+    float *prior_y = NULL;
+    float *prior_w = NULL;
+    float *prior_h = NULL;
+
+    float *scores = NULL;
+
+    Data(size_t size) : size(size) {
+        loc_x = new float[size];
+        loc_y = new float[size];
+        loc_w = new float[size];
+        loc_h = new float[size];
+
+        prior_x = new float[size];
+        prior_y = new float[size];
+        prior_w = new float[size];
+        prior_h = new float[size];
+
+        scores = new float[size];
+    }
+};
 
 vector<vector<float>> splitFloats(const vector<float>& floats, int index) ;
-vector<float> readFloatsFromFile(const string& filename);
+Data* readFloatsFromFile(const string& filename);
+
+#endif // READER_HPP

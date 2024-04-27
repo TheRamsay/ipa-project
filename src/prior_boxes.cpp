@@ -79,74 +79,47 @@ std::vector<std::vector<float>> PriorBox::forward()
     return output;
 }
 
-std::vector<std::vector<float>> decode(const std::vector<std::vector<float>> &loc, const std::vector<std::vector<float>> &priors, const std::vector<float> &variances)
+
+std::vector<std::vector<float>> decode(Data *data, const std::vector<float> &variances, float confidence_threshold)
 {
-    // typedef float v8f __attribute__((vector_size(32)));
-
-    float loc_x[loc.size()] = {};
-    float loc_y[loc.size()] = {};
-    float loc_w[loc.size()] = {};
-    float loc_h[loc.size()] = {};
-
-    float prior_x[priors.size()] = {};
-    float prior_y[priors.size()] = {};
-    float prior_w[priors.size()] = {};
-    float prior_h[priors.size()] = {};
-
-    std::vector<float> xmin(loc.size());
-    std::vector<float> ymin(loc.size());
-    std::vector<float> xmax(loc.size());
-    std::vector<float> ymax(loc.size());
-
-    for (size_t i = 0; i < loc.size(); i++)
-    {
-        loc_x[i] = loc[i][0];
-        loc_y[i] = loc[i][1];
-        loc_w[i] = loc[i][2];
-        loc_h[i] = loc[i][3];
-
-        prior_x[i] = priors[i][0];
-        prior_y[i] = priors[i][1];
-        prior_w[i] = priors[i][2];
-        prior_h[i] = priors[i][3];
-    }
+    std::vector<float> xmin(data->loc_x.size());
+    std::vector<float> ymin(data->loc_x.size());
+    std::vector<float> xmax(data->loc_x.size());
+    std::vector<float> ymax(data->loc_x.size());
 
     __m256 var_x = _mm256_broadcast_ss(&variances[0]);
     __m256 var_y = _mm256_broadcast_ss(&variances[1]);
     __m256 var_w = _mm256_broadcast_ss(&variances[2]);
     __m256 var_h = _mm256_broadcast_ss(&variances[3]);
 
+    __m256 threshold = _mm256_broadcast_ss(&confidence_threshold);
+
     std::vector<std::vector<float>> boxes;
     size_t bi = 0;
-    for (size_t i = 0; i < loc.size(); i += 8)
+
+    for (size_t i = 0; i < data->loc_x.size(); i += 8)
     {
-        // We load two elements at a time
-        __m256 loc_x_r = _mm256_loadu_ps(&loc_x[i]);
-        __m256 loc_y_r = _mm256_loadu_ps(&loc_y[i]);
-        __m256 loc_w_r = _mm256_loadu_ps(&loc_w[i]);
-        __m256 loc_h_r = _mm256_loadu_ps(&loc_h[i]);
+        if (i + 8 > data->loc_x.size())
+        {
+            break;
+        }
 
-        __m256 prior_x_r = _mm256_loadu_ps(&prior_x[i]);
-        __m256 prior_y_r = _mm256_loadu_ps(&prior_y[i]);
-        __m256 prior_w_r = _mm256_loadu_ps(&prior_w[i]);
-        __m256 prior_h_r = _mm256_loadu_ps(&prior_h[i]);
+        __m256 scores = _mm256_load_ps(&data->scores[i]);
 
-        // loc   [x, y, w, h, x, y, w, h]
-        // prior [x, y, w, h, x, y, w, h]
-        // var   [x, y, w, h, x, y, w, h]
+        __m256 mask = _mm256_cmp_ps(scores, threshold, _CMP_GT_OQ);
 
-        // decoded
+        __m256 loc_x_r = _mm256_loadu_ps(&data->loc_x[i]);
+        __m256 loc_y_r = _mm256_loadu_ps(&data->loc_y[i]);
+        __m256 loc_w_r = _mm256_loadu_ps(&data->loc_w[i]);
+        __m256 loc_h_r = _mm256_loadu_ps(&data->loc_h[i]);
 
-        // const auto &prior = priors[i];
-        // const auto &loc_pred = loc[i];
-        // float prior_x = prior[0];
-        // float prior_y = prior[1];
-        // float prior_w = prior[2];
-        // float prior_h = prior[3];
-        // float var_x = variances[0];
-        // float var_y = variances[1];
-        // float var_w = variances[2];
-        // float var_h = variances[3];
+        __m256 prior_x_r = _mm256_loadu_ps(&data->prior_x[i]);
+        __m256 prior_y_r = _mm256_loadu_ps(&data->prior_y[i]);
+        __m256 prior_w_r = _mm256_loadu_ps(&data->prior_w[i]);
+        __m256 prior_h_r = _mm256_loadu_ps(&data->prior_h[i]);
+
+        prior_w_r = _mm256_and_ps(prior_w_r, mask);
+        prior_h_r = _mm256_and_ps(prior_h_r, mask);
 
         __m256 decode_x = _mm256_mul_ps(prior_w_r, var_x);
         decode_x = _mm256_mul_ps(decode_x, loc_x_r);
@@ -174,38 +147,7 @@ std::vector<std::vector<float>> decode(const std::vector<std::vector<float>> &lo
         _mm256_storeu_ps(&xmax[i], decode_xmax);
         _mm256_storeu_ps(&ymax[i], decode_ymax);
 
-        // boxes.push_back({decode_xmin[0], decode_ymin[0], decode_xmax[0], decode_ymax[0]});
-        // boxes.push_back({decode_xmin[1], decode_ymin[1], decode_xmax[1], decode_ymax[1]});
-        // boxes.push_back({decode_xmin[2], decode_ymin[2], decode_xmax[2], decode_ymax[2]});
-        // boxes.push_back({decode_xmin[3], decode_ymin[3], decode_xmax[3], decode_ymax[3]});
-        // boxes.push_back({decode_xmin[4], decode_ymin[4], decode_xmax[4], decode_ymax[4]});
-        // boxes.push_back({decode_xmin[5], decode_ymin[5], decode_xmax[5], decode_ymax[5]});
-        // boxes.push_back({decode_xmin[6], decode_ymin[6], decode_xmax[6], decode_ymax[6]});
-        // boxes.push_back({decode_xmin[7], decode_ymin[7], decode_xmax[7], decode_ymax[7]});
-
-        // for (size_t j = 0; j < 8; j++)
-        // {
-        //     boxes.push_back({decode_xmin[j], decode_ymin[j], decode_xmax[j], decode_ymax[j]});
-        // }
-
-        // float decoded_x = prior_x + loc_pred[0] * var_x * prior_w;
-        // float decoded_y = prior_y + loc_pred[1] * var_y * prior_h;
-        // float decoded_w = prior_w * std::exp(loc_pred[2] * var_w);
-        // float decoded_h = prior_h * std::exp(loc_pred[3] * var_h);
-
-        // float decoded_xmin = decoded_x - decoded_w / 2;
-        // float decoded_ymin = decoded_y - decoded_h / 2;
-        // float decoded_xmax = decoded_x + decoded_w / 2;
-        // float decoded_ymax = decoded_y + decoded_h / 2;
-
-        // boxes.push_back({decoded_xmin, decoded_ymin, decoded_xmax, decoded_ymax});
     }
 
-    // for (size_t i = 0; i < loc.size(); i++)
-    // {
-    //     boxes.push_back({xmin[i], ymin[i], xmax[i], ymax[i]});
-    // }
-
-    // return boxes;
     return  { xmin, ymin, xmax, ymax };
 }
