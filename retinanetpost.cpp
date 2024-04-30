@@ -57,88 +57,24 @@ int main(int argc, char **argv)
     int thickness = 2;       // Thickness of the rectangle border
 
     InstructionCounter counter;
-    // counter.start();
+    counter.start();
     /*******************Part to optmize*********************/
 
-    auto data = readFloatsFromFile(argv[2]);
+    auto data = readFloatsFromFile(argv[2], priors, CONFIDENCE_THRESHOLD);
+    printf("Data size %d\n", data->size);
 
-    // for (size_t i = 0; i < 12600; i++)
-    // {
-    //     data->prior_x.push_back(priors[i][0]);
-    //     data->prior_y.push_back(priors[i][1]);
-    //     data->prior_w.push_back(priors[i][2]);
-    //     data->prior_h.push_back(priors[i][3]);
-    // }
-
-    Data *d = new Data();
-    int loaded = 0;
-
-    for (int i = 0; i < 12600; i++)
-    {
-        if (data->scores[i] <= CONFIDENCE_THRESHOLD)
-        {
-            continue;
-        }
-
-        loaded++;
-
-        d->loc_x.push_back(data->loc_x[i]);
-        d->loc_y.push_back(data->loc_y[i]);
-        d->loc_w.push_back(data->loc_w[i]);
-        d->loc_h.push_back(data->loc_h[i]);
-
-        d->scores.push_back(data->scores[i]);
-
-        d->prior_x.push_back(priors[i][0]);
-        d->prior_y.push_back(priors[i][1]);
-        d->prior_w.push_back(priors[i][2]);
-        d->prior_h.push_back(priors[i][3]);
-    }
-
-    // d->loc_x.resize(loaded);
-    // counter.print();
-
-    // vector<float> floats = readFloatsFromFile(argv[2]);
-    // vector<vector<float>> split_vectors = splitFloats(floats, 12600*4);
-
-    // vector<float> floatarr = split_vectors[0];
-    // vector<float> floatarrscr = split_vectors[1];
-    vector<float> floatarrscr = data->scores;
-
-    // std::vector<std::vector<float>> loc_soa;
-    // std::vector<std::vector<float>> loc;
-    // for (size_t i = 0; i < num_anchors; i++) {
-    //     loc.push_back({floatarr[i * 4], floatarr[i * 4 + 1], floatarr[i * 4 + 2], floatarr[i * 4 + 3]});
-    // }
-
-    // counter.start();
-    counter.start();
-    std::vector<std::vector<float>> ddecoded_boxes = decode(d, variances, CONFIDENCE_THRESHOLD);
+    auto floatarrscr = data->scores;
+    printf("READER ");
     counter.print();
-    // printf("decoded_boxes size %d\n", ddecoded_boxes[0].size());
-    // counter.print();
+    counter.end();
+    counter.start();
 
-    // ofstream fff;
-    // fff.open("mlem_mine.txt");
-
-    // for (size_t i = 0; i < 12600; i++) {
-    // printf("%f %f %f %f\n", ddecoded_boxes[0][i], ddecoded_boxes[1][i], ddecoded_boxes[2][i], ddecoded_boxes[3][i]);
-    // fff << ddecoded_boxes[0][i] << " " << ddecoded_boxes[1][i] << " " << ddecoded_boxes[2][i] << " " << ddecoded_boxes[3][i] << "\n";
-    // }
-
-    // fff.close();
-
-    std::vector<std::vector<float>> decoded_boxes;
-
-    for (size_t i = 0; i < loaded; i++)
-    {
-        decoded_boxes.push_back({ddecoded_boxes[0][i], ddecoded_boxes[1][i], ddecoded_boxes[2][i], ddecoded_boxes[3][i]});
-    }
-
-    // exit(0);
-
-    // std::vector<std::vector<float>> decoded_boxes = decode(loc, priors, variances);
-    // counter.print();
+    counter.start();
+    auto ddecoded_boxes = decode(data, variances, CONFIDENCE_THRESHOLD);
+    printf("DECODE ");
+    counter.print();
+    counter.end();
+    counter.start();
 
     std::vector<float> scores;
     std::vector<int> inds;
@@ -146,46 +82,82 @@ int main(int argc, char **argv)
 
     std::vector<std::vector<float>> det_boxes;
 
-    // printf("mLEML MLEMEL%d\n", floatarrscr.size());
+    // for (size_t i = 0; i < 10; i++)
+    // {
+    //     scores.push_back(floatarrscr[i * 2 + 1]);
+    //     if (floatarrscr[i] > CONFIDENCE_THRESHOLD)
+    //     {
+    //         inds.push_back(i);
+    //         decoded_boxes[i].push_back(floatarrscr[i * 2 + 1]);
+    //         decoded_boxes[i][0] = decoded_boxes[i][0] * 640;
+    //         decoded_boxes[i][1] = decoded_boxes[i][1] * 480;
+    //         decoded_boxes[i][2] = decoded_boxes[i][2] * 640;
+    //         decoded_boxes[i][3] = decoded_boxes[i][3] * 480;
+    //         det_boxes.push_back(decoded_boxes[i]);
+    //         det_scores.push_back(scores[i]);
+    //     }
+    // }
 
-    for (size_t i = 0; i < loaded; i++)
+    float w = 640.0f;
+    float h = 480.0f;
+    __m256 height = _mm256_broadcast_ss(&h);
+    __m256 width = _mm256_broadcast_ss(&w);
+
+    for (size_t i = 0; i < data->size; i += 8)
     {
-        // scores.push_back(floatarrscr[i*2+1]);
-        // if (floatarrscr[i] > CONFIDENCE_THRESHOLD)
-        // {
-            // inds.push_back(i);
-            // decoded_boxes[i].push_back(floatarrscr[i*2+1]);
-        decoded_boxes[i][0] = decoded_boxes[i][0] * 640;
-        decoded_boxes[i][1] = decoded_boxes[i][1] * 480;
-        decoded_boxes[i][2] = decoded_boxes[i][2] * 640;
-        decoded_boxes[i][3] = decoded_boxes[i][3] * 480;
-        det_boxes.push_back(decoded_boxes[i]);
-            // det_scores.push_back(scores[i]);
-        // }
+        if (i + 8 > data->size)
+        {
+            break;
+        }
+
+        __m256 ddecoded_boxes_x = _mm256_loadu_ps(&ddecoded_boxes[0][i]);
+        __m256 ddecoded_boxes_y = _mm256_loadu_ps(&ddecoded_boxes[1][i]);
+        __m256 ddecoded_boxes_w = _mm256_loadu_ps(&ddecoded_boxes[2][i]);
+        __m256 ddecoded_boxes_h = _mm256_loadu_ps(&ddecoded_boxes[3][i]);
+
+        ddecoded_boxes_x = _mm256_mul_ps(ddecoded_boxes_x, width);
+        ddecoded_boxes_y = _mm256_mul_ps(ddecoded_boxes_y, height);
+        ddecoded_boxes_w = _mm256_mul_ps(ddecoded_boxes_w, width);
+        ddecoded_boxes_h = _mm256_mul_ps(ddecoded_boxes_h, height);
+
+        auto xx = ddecoded_boxes[0];
+        _mm256_store_ps(&xx[i], ddecoded_boxes_x);
+        _mm256_store_ps(&(ddecoded_boxes[1][i]), ddecoded_boxes_y);
+        _mm256_store_ps(&(ddecoded_boxes[2][i]), ddecoded_boxes_w);
+        _mm256_store_ps(&(ddecoded_boxes[3][i]), ddecoded_boxes_h);
     }
 
+    printf("BEFORE NMS ");
+    counter.print();
+    counter.end();
+    counter.start();
+
     auto out = nms(det_boxes, 0.4);
+
+    printf("NMS ");
+    counter.print();
+    counter.end();
 
     // Test
     // f1(10);
 
-    counter.print();
+    // counter.print();
 
-    counter.print();
-    /************************************************/
+    // counter.print();
+    // /************************************************/
 
-    for (int i = 0; i < out.size(); i++)
-    {
-        // #ifdef DEBUG
-        printf("Box %f %f %f %f %f\n", out[i][0], out[i][1], out[i][2], out[i][3], out[i][4]);
-        // #endif
+    // for (int i = 0; i < out.size(); i++)
+    // {
+    //     // #ifdef DEBUG
+    //     printf("Box %f %f %f %f %f\n", out[i][0], out[i][1], out[i][2], out[i][3], out[i][4]);
+    //     // #endif
 
-        cv::Rect roi((int)out[i][0], (int)out[i][1], (int)out[i][2] - (int)out[i][0], (int)out[i][3] - (int)out[i][1]);
-        rectangle(image, roi, color, thickness);
-    }
+    //     cv::Rect roi((int)out[i][0], (int)out[i][1], (int)out[i][2] - (int)out[i][0], (int)out[i][3] - (int)out[i][1]);
+    //     rectangle(image, roi, color, thickness);
+    // }
 
-    imshow("Output", image);
-    waitKey(0);
+    // imshow("Output", image);
+    // waitKey(0);
 
     return 0;
 }

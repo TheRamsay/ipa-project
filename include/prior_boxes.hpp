@@ -29,7 +29,7 @@ public:
 
 };
 
-std::vector<std::vector<float>> decode(Data *data, const std::vector<float>& variances, float confidence_threshold);
+float **decode(Data *data, const std::vector<float>& variances, float confidence_threshold);
 // std::vector<std::vector<float>> decode(const std::vector<std::vector<float>>& loc, const std::vector<std::vector<float>>& priors, const std::vector<float>& variances);
 
 

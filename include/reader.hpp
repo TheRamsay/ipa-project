@@ -3,9 +3,6 @@
 * Tomas Goldmann,2024
 */
 
-#ifndef READER_HPP
-#define READER_HPP
-
 #pragma once
 
 #include <iostream>
@@ -46,6 +43,4 @@ public:
 };
 
 vector<vector<float>> splitFloats(const vector<float>& floats, int index) ;
-Data* readFloatsFromFile(const string& filename);
-
-#endif // READER_HPP
+Data* readFloatsFromFile(const string& filename, vector<vector<float>>& priors, float threshold);

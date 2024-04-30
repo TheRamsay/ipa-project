@@ -1,107 +1,110 @@
 /*
-* Function to read floats from txt
-* Tomas Goldmann,2023
-*/
-
+ * Function to read floats from txt
+ * Tomas Goldmann,2023
+ */
 
 #include "reader.hpp"
 
 using namespace std;
 
-vector<vector<float>> splitFloats(const vector<float>& floats, int index) {
+vector<vector<float>> splitFloats(const vector<float> &floats, int index)
+{
 
     vector<float> first_half;
     vector<float> second_half;
 
     // Ensure the original vector has enough elements for splitting
-    if (floats.size() < 6*12600) {
+    if (floats.size() < 6 * 12600)
+    {
         cerr << "Error: The input must containt 6*12600 floats" << endl;
         return {first_half, second_half}; // Return empty vectors
     }
 
     // Split the original vector into two separate vectors
     first_half.insert(first_half.end(), floats.begin(), floats.begin() + index);
-    second_half.insert(second_half.end(), floats.begin() + index,  floats.end() );
+    second_half.insert(second_half.end(), floats.begin() + index, floats.end());
 
     // Return a vector containing the two split vectors
     return {first_half, second_half};
 }
 
+Data* readFloatsFromFile(const string& filename, vector<vector<float>>& priors, float threshold)
+{
+    std::ifstream file(filename);
+    std::vector<std::string> lines;
+    std::string line;
 
-
-Data* readFloatsFromFile(const string& filename) {
-    vector<float> floats;
-    ifstream file(filename);
-
-    // Check if the file is opened successfully
-    if (!file.is_open()) {
-        cerr << "Error opening the file" << endl;
-        // return floats; // Return an empty vector if the file cannot be opened
-        return NULL; // Return an empty vector if the file cannot be opened
+    if (file.is_open())
+    {
+        while (std::getline(file, line))
+        {
+            lines.push_back(line);
+        }
+        file.close();
+    }
+    else
+    {
+        std::cerr << "Error: Unable to open file." << std::endl;
+        return NULL; // or handle the error as you see fit
     }
 
-    Data *data = new Data();
-    string line;
+    auto last_line = lines.back();
+    auto data = new Data(12600);
 
-    // Read each line from the file
-    int line_index = 0;
-    while (getline(file, line)) {
-        // Create a string stream from the line
-        stringstream ss(line);
-        string token;
+    // Split the last line into a vector of floats
+    std::istringstream iss(last_line);
+    std::vector<float> floats;
+    int loaded = 0;
+    for (int i = 0; i < 12600; i++)
+    {
+        string out;
+        getline(iss, out, ',');
+        getline(iss, out, ',');
 
-        // Split the line by commas and read each float
-        // while (getline(ss, token, ',')) {
-        // // while (getline(ss, token, ',')) {
-        //     // Convert the string to a float and store it in the vector
-        //     floats.push_back(stof(token));
-        // }
+        float f = stof(out);
 
-        if (line_index++ == 12600) {
-
-            int mlem = 0;
-            while (getline(ss, token, ',')) {
-                if (mlem++ % 2 != 0) {
-                    data->scores.push_back(stof(token));
-                }
-            }
-            break;
+        if (f <= threshold)
+        {
+            continue;
         }
 
-        auto vectors = {
-            data->loc_x,
-            data->loc_y,
-            data->loc_w,
-            data->loc_h
-        };
+        loaded++;
 
-        int ii = 0;
-        for (auto &vec : vectors) {
-            getline(ss, token, ',');
-            switch (ii) {
-                case 0:
-                    data->loc_x.push_back(stof(token));
-                    break;
-                case 1:
-                    data->loc_y.push_back(stof(token));
-                    break;
-                case 2:
-                    data->loc_w.push_back(stof(token));
-                    break;
-                case 3:
-                    data->loc_h.push_back(stof(token));
-                    break;
+        data->scores[i] = f;
+
+        auto selected_line = lines[i];
+
+        // split the line into a vector of floats
+        std::istringstream iss2(selected_line);
+        for (int j = 0; j < 4; j++)
+        {
+            float f2;
+            iss2 >> f2;
+
+            switch (j)
+            {
+            case 0:
+                data->loc_x[i] = f2;
+                break;
+            case 1:
+                data->loc_y[i] = f2;
+                break;
+            case 2:
+                data->loc_w[i] = f2;
+                break;
+            case 3:
+                data->loc_h[i] = f2;
+                break;
             }
-
-            ii++;
-            // vec.push_back(1.0);
-            // vec.push_back(stof(token));
         }
+
+        data->prior_x[i] = priors[i][0];
+        data->prior_y[i] = priors[i][1];
+        data->prior_w[i] = priors[i][2];
+        data->prior_h[i] = priors[i][3];
     }
 
-    // Close the file
-    file.close();
+    data->size = loaded;
 
     return data;
-    // return floats;
 }

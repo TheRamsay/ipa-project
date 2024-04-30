@@ -80,12 +80,12 @@ std::vector<std::vector<float>> PriorBox::forward()
 }
 
 
-std::vector<std::vector<float>> decode(Data *data, const std::vector<float> &variances, float confidence_threshold)
+ float **decode(Data *data, const std::vector<float> &variances, float confidence_threshold)
 {
-    std::vector<float> xmin(data->loc_x.size());
-    std::vector<float> ymin(data->loc_x.size());
-    std::vector<float> xmax(data->loc_x.size());
-    std::vector<float> ymax(data->loc_x.size());
+    float *xmin = new float[data->size];
+    float *ymin = new float[data->size];
+    float *xmax = new float[data->size];
+    float *ymax = new float[data->size];
 
     __m256 var_x = _mm256_broadcast_ss(&variances[0]);
     __m256 var_y = _mm256_broadcast_ss(&variances[1]);
@@ -97,9 +97,9 @@ std::vector<std::vector<float>> decode(Data *data, const std::vector<float> &var
     std::vector<std::vector<float>> boxes;
     size_t bi = 0;
 
-    for (size_t i = 0; i < data->loc_x.size(); i += 8)
+    for (size_t i = 0; i < data->size; i += 8)
     {
-        if (i + 8 > data->loc_x.size())
+        if (i + 8 > data->size)
         {
             break;
         }
@@ -149,5 +149,11 @@ std::vector<std::vector<float>> decode(Data *data, const std::vector<float> &var
 
     }
 
-    return  { xmin, ymin, xmax, ymax };
+    float **ret = new float *[4];
+    ret[0] = xmin;
+    ret[1] = ymin;
+    ret[2] = xmax;
+    ret[3] = ymax;
+
+    return ret;
 }
