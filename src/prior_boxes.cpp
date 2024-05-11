@@ -104,7 +104,7 @@ std::vector<std::vector<float>> PriorBox::forward()
             break;
         }
 
-        __m256 scores = _mm256_load_ps(&data->scores[i]);
+        __m256 scores = _mm256_loadu_ps(data->scores + i);
 
         __m256 mask = _mm256_cmp_ps(scores, threshold, _CMP_GT_OQ);
 
@@ -146,7 +146,6 @@ std::vector<std::vector<float>> PriorBox::forward()
         _mm256_storeu_ps(&ymin[i], decode_ymin);
         _mm256_storeu_ps(&xmax[i], decode_xmax);
         _mm256_storeu_ps(&ymax[i], decode_ymax);
-
     }
 
     float **ret = new float *[4];

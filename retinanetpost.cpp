@@ -5,6 +5,15 @@
 #include <inttypes.h>
 #include "ipa_tool.h"
 
+#include <sys/mman.h> // Required for mmap
+#include <unistd.h>   // Required for close
+#include <cstring>
+#include <x86intrin.h>
+#include <immintrin.h>
+#include <sys/stat.h>
+#include <string.h>
+#include <fcntl.h>
+
 #include <opencv2/highgui.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
@@ -61,17 +70,22 @@ int main(int argc, char **argv)
     /*******************Part to optmize*********************/
 
     auto data = readFloatsFromFile(argv[2], priors, CONFIDENCE_THRESHOLD);
-    printf("Data size %d\n", data->size);
+
+    if (data == NULL)
+    {
+        return -1;
+    }
 
     auto floatarrscr = data->scores;
-    printf("READER ");
+    printf("READER\t\t\t");
     counter.print();
     counter.end();
     counter.start();
 
     counter.start();
+
     auto ddecoded_boxes = decode(data, variances, CONFIDENCE_THRESHOLD);
-    printf("DECODE ");
+    printf("DECODE\t\t\t");
     counter.print();
     counter.end();
     counter.start();
@@ -81,22 +95,6 @@ int main(int argc, char **argv)
     std::vector<float> det_scores;
 
     std::vector<std::vector<float>> det_boxes;
-
-    // for (size_t i = 0; i < 10; i++)
-    // {
-    //     scores.push_back(floatarrscr[i * 2 + 1]);
-    //     if (floatarrscr[i] > CONFIDENCE_THRESHOLD)
-    //     {
-    //         inds.push_back(i);
-    //         decoded_boxes[i].push_back(floatarrscr[i * 2 + 1]);
-    //         decoded_boxes[i][0] = decoded_boxes[i][0] * 640;
-    //         decoded_boxes[i][1] = decoded_boxes[i][1] * 480;
-    //         decoded_boxes[i][2] = decoded_boxes[i][2] * 640;
-    //         decoded_boxes[i][3] = decoded_boxes[i][3] * 480;
-    //         det_boxes.push_back(decoded_boxes[i]);
-    //         det_scores.push_back(scores[i]);
-    //     }
-    // }
 
     float w = 640.0f;
     float h = 480.0f;
@@ -120,21 +118,27 @@ int main(int argc, char **argv)
         ddecoded_boxes_w = _mm256_mul_ps(ddecoded_boxes_w, width);
         ddecoded_boxes_h = _mm256_mul_ps(ddecoded_boxes_h, height);
 
-        auto xx = ddecoded_boxes[0];
-        _mm256_store_ps(&xx[i], ddecoded_boxes_x);
-        _mm256_store_ps(&(ddecoded_boxes[1][i]), ddecoded_boxes_y);
-        _mm256_store_ps(&(ddecoded_boxes[2][i]), ddecoded_boxes_w);
-        _mm256_store_ps(&(ddecoded_boxes[3][i]), ddecoded_boxes_h);
+        _mm256_storeu_ps(&(ddecoded_boxes[0][i]), ddecoded_boxes_x);
+        _mm256_storeu_ps(&(ddecoded_boxes[1][i]), ddecoded_boxes_y);
+        _mm256_storeu_ps(&(ddecoded_boxes[2][i]), ddecoded_boxes_w);
+        _mm256_storeu_ps(&(ddecoded_boxes[3][i]), ddecoded_boxes_h);
     }
 
-    printf("BEFORE NMS ");
+    printf("BEFORE NMS\t\t\t");
     counter.print();
     counter.end();
     counter.start();
 
-    auto out = nms(det_boxes, 0.4);
+    auto mlem_data = new Data(data->size);
+    mlem_data->loc_x = ddecoded_boxes[0];
+    mlem_data->loc_y = ddecoded_boxes[1];
+    mlem_data->loc_w = ddecoded_boxes[2];
+    mlem_data->loc_h = ddecoded_boxes[3];
+    mlem_data->scores = data->scores;
 
-    printf("NMS ");
+    auto out = nms(mlem_data, 0.4);
+
+    printf("NMS\t\t\t");
     counter.print();
     counter.end();
 
@@ -146,18 +150,20 @@ int main(int argc, char **argv)
     // counter.print();
     // /************************************************/
 
-    // for (int i = 0; i < out.size(); i++)
-    // {
-    //     // #ifdef DEBUG
-    //     printf("Box %f %f %f %f %f\n", out[i][0], out[i][1], out[i][2], out[i][3], out[i][4]);
-    //     // #endif
+    for (int i = 0; i < out->size; i++)
+    {
+#ifdef DEBUG
+        // printf("Box %f %f %f %f %f\n", out[i][0], out[i][1], out[i][2], out[i][3], out[i][4]);
+        printf("Box %f %f %f %f\n", out->loc_x[i], out->loc_y[i], out->loc_w[i], out->loc_y[i]);
+#endif
 
-    //     cv::Rect roi((int)out[i][0], (int)out[i][1], (int)out[i][2] - (int)out[i][0], (int)out[i][3] - (int)out[i][1]);
-    //     rectangle(image, roi, color, thickness);
-    // }
+        cv::Rect roi((int)out->loc_x[i], (int)out->loc_y[i], (int)out->loc_w[i] - (int)out->loc_x[i], (int)out->loc_h[i] - (int)out->loc_y[i]);
+        rectangle(image, roi, color, thickness);
+    }
 
-    // imshow("Output", image);
-    // waitKey(0);
+    imshow("Output", image);
+    waitKey(0);
 
     return 0;
 }
+

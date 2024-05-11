@@ -10,8 +10,9 @@
 #include <vector>
 #include <cmath>
 #include <algorithm>
+#include <reader.hpp>
 
-std::vector<std::vector<float>> nms(std::vector<std::vector<float>>& bboxes, float threshold);
+Data * nms(Data *bboxes, float threshold);
 
 
 #endif // UTILS_HPP

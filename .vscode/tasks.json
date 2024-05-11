@@ -7,8 +7,10 @@
             "type": "shell",
             "command": "g++",
             "args": [
+                "-O3",
                 "-g",
                 "-mavx",
+                "-mavx2",
                 "-std=c++11",
                 "-fpic",
                 "-o",

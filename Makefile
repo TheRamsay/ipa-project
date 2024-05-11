@@ -1,7 +1,7 @@
 # Makefile for IPA_projekt_2024
 
 CXX = g++
-CXXFLAGS = -g -mavx -std=c++11 -fpic `pkg-config --cflags opencv4`
+CXXFLAGS = -g -mavx -mavx2 -std=c++11 -fpic `pkg-config --cflags opencv4`
 LDFLAGS = -ldl
 LIBS = `pkg-config --cflags --libs opencv4`
 INCLUDES = -Iinclude/

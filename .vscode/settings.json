@@ -1,5 +1,7 @@
 {
   "files.associations": {
+    "*.html": "html",
+    "*.py": "python",
     "iostream": "cpp",
     "array": "cpp",
     "atomic": "cpp",
@@ -62,7 +64,10 @@
     "thread": "cpp",
     "cinttypes": "cpp",
     "typeindex": "cpp",
-    "typeinfo": "cpp"
+    "typeinfo": "cpp",
+    "__split_buffer": "cpp",
+    "__locale": "cpp",
+    "ios": "cpp"
   },
   "debug.allowBreakpointsEverywhere": true,
   "C_Cpp_Runner.msvcBatchPath": "",
